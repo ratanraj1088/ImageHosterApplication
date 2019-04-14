@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
@@ -98,16 +99,45 @@ public class ImageController {
 
     //The method first needs to convert the list of all the tags to a string containing all the tags separated by a comma and then add this string in a Model type object
     //This string is then displayed by 'edit.html' file as previous tags of an image
+  //  @RequestMapping(value = "/editImage")
+  //  public String editImage(@RequestParam("imageId") Integer imageId, Model model) {
+  //      Image image = imageService.getImage(imageId);
+//
+  //      String tags = convertTagsToString(image.getTags());
+  //      model.addAttribute("image", image);
+  //      model.addAttribute("tags", tags);
+  //      return "images/edit";
+  //  }
+//
+    private Boolean userSameAsLoggedInUser(User user, HttpSession session) {
+        User loggedInuser = (User) session.getAttribute("loggeduser");
+        if (user.getId() == loggedInuser.getId()) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     @RequestMapping(value = "/editImage")
-    public String editImage(@RequestParam("imageId") Integer imageId, Model model) {
+    public String editImage(@RequestParam("imageId") Integer imageId, Model model, HttpSession session,
+                            final RedirectAttributes redirectAttributes) {
         Image image = imageService.getImage(imageId);
 
         String tags = convertTagsToString(image.getTags());
+        Boolean isLoggedUSer = userSameAsLoggedInUser(image.getUser(), session);
+        String error = "Only the owner of the image can edit the image";
         model.addAttribute("image", image);
         model.addAttribute("tags", tags);
-        return "images/edit";
-    }
 
+        if (!isLoggedUSer) {
+            redirectAttributes.addAttribute("editError", error);
+            model.addAttribute("editError", error);
+            redirectAttributes.addFlashAttribute("editError", error);
+            return "redirect:/images/" + image.getId() + "/" + image.getTitle();
+        } else {
+            return "images/edit";
+        }
+    }
     //This controller method is called when the request pattern is of type 'images/edit' and also the incoming request is of PUT type
     //The method receives the imageFile, imageId, updated image, along with the Http Session
     //The method adds the new imageFile to the updated image if user updates the imageFile and adds the previous imageFile to the new updated image if user does not choose to update the imageFile
@@ -150,6 +180,7 @@ public class ImageController {
     public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId) {
         imageService.deleteImage(imageId);
         return "redirect:/images";
+
     }
 
 
